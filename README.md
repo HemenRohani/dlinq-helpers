@@ -29,7 +29,7 @@ Kendo.DynamicLinq implements server paging, filtering, sorting and aggregating v
 1. Use the `ToDataSourceResult` extension method to apply paging, sorting and filtering.
 
         [WebMethod]
-        public static DataSourceResult Products(int take, int skip, IEnumerable<Sort> sort, Filter filter, IEnumerable<Aggregator> aggregates, group)
+        public static DataSourceResult Products(int take, int skip, IEnumerable<Sort> sort, Filter filter, IEnumerable<Aggregator> aggregates, IEnumerable<Group> group)
         {
             using (var northwind = new Northwind())
             {
