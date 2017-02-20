@@ -1,35 +1,19 @@
+using Newtonsoft.Json;
 using System;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.Serialization;
 
 namespace Kendo.DynamicLinq
 {
-	/// <summary>
-	/// Represents a aggregate expression of Kendo DataSource.
-	/// </summary>
-	[DataContract(Name = "aggregate")]
 	public class Aggregator
 	{
-		/// <summary>
-		/// Gets or sets the name of the aggregated field (property).
-		/// </summary>
-		[DataMember(Name = "field")]
+        [JsonProperty(PropertyName = "field")]
 		public string Field { get; set; }
 
-		/// <summary>
-		/// Gets or sets the aggregate.
-		/// </summary>
-		[DataMember(Name = "aggregate")]
+        [JsonProperty(PropertyName = "aggregate")]
 		public string Aggregate { get; set; }
-
-		/// <summary>
-		/// Get MethodInfo.
-		/// </summary>
-		/// <param name="type">Specifies the type of querable data.</param>
-		/// <returns>A MethodInfo for field.</returns>
 		public MethodInfo MethodInfo(Type type)
 		{
 			var proptype = type.GetProperty(Field).PropertyType;
@@ -52,15 +36,19 @@ namespace Kendo.DynamicLinq
 
 		private static MethodInfo GetMethod(string methodName, MethodInfo methodTypes, int genericArgumentsCount)
 		{
-			var methods = from method in typeof(Queryable).GetMethods(BindingFlags.Public | BindingFlags.Static)
-						  let parameters = method.GetParameters()
-						  let genericArguments = method.GetGenericArguments()
-						  where method.Name == methodName &&
-							genericArguments.Length == genericArgumentsCount &&
-							parameters.Select(p => p.ParameterType).SequenceEqual((Type[])methodTypes.Invoke(null, genericArguments))
-						  select method;
-			return methods.FirstOrDefault();
-		}
+            //VS2015 create some [CopilerGenerated] object and change static Func to non-static
+            //Create and send an instance of methodTypes.ReflectedType to Invoke().
+
+            var aggregate = Activator.CreateInstance(methodTypes.ReflectedType);
+            var methods = from method in typeof(Queryable).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                          let parameters = method.GetParameters()
+                          let genericArguments = method.GetGenericArguments()
+                          where method.Name == methodName &&
+                            genericArguments.Length == genericArgumentsCount &&
+                            parameters.Select(p => p.ParameterType).SequenceEqual((Type[])methodTypes.Invoke(aggregate, genericArguments))
+                          select method;
+            return methods.FirstOrDefault();
+        }
 
 		private static Func<Type, Type[]> CountNullableFunc()
 		{
@@ -96,5 +84,7 @@ namespace Kendo.DynamicLinq
 					typeof (Expression<>).MakeGenericType(typeof (Func<,>).MakeGenericType(T, typeof(U)))
 				};
 		}
+
+
 	}
 }
