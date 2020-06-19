@@ -44,6 +44,7 @@ namespace Kendo.DynamicLinq
 
         private void Collect(IList<Filter> filters)
         {
+            filters.Add(this);
             if (Filters != null && Filters.Any())
             {
                 foreach (Filter filter in Filters)
@@ -53,10 +54,6 @@ namespace Kendo.DynamicLinq
                     filter.Collect(filters);
                 }
             }
-            else
-            {
-                filters.Add(this);
-            }
         }
 
         /// <summary>
@@ -65,26 +62,31 @@ namespace Kendo.DynamicLinq
         /// <param name="filters">A list of flattened filters.</param>
         public string ToExpression(IList<Filter> filters)
         {
-            if (Filters != null && Filters.Any())
-            {
-                return "(" + String.Join(" " + Logic + " ", Filters.Select(filter => filter.ToExpression(filters)).ToArray()) + ")";
-            }
-
+           
             int index = filters.IndexOf(this);
 
             string comparison = operators[Operator];
+            StringBuilder sb = new StringBuilder();
             
             if (Operator == "doesnotcontain")
             {
-                return String.Format("!{0}.{1}(@{2})", Field, comparison, index);
+                sb.Append(String.Format("!{0}.{1}(@{2})", Field, comparison, index));
             }
-
-            if (comparison == "StartsWith" || comparison == "EndsWith" || comparison == "Contains")
+            else if (comparison == "StartsWith" || comparison == "EndsWith" || comparison == "Contains")
             {
-                return String.Format("{0}.{1}(@{2})", Field, comparison, index);
+                sb.Append(String.Format("{0}.{1}(@{2})", Field, comparison, index));
             }
+            else
+                sb.Append(String.Format("{0} {1} @{2}", Field, comparison, index));
 
-            return String.Format("{0} {1} @{2}", Field, comparison, index);
+
+            if (Filters != null && Filters.Any())
+            {
+                sb.Insert(0,"(");
+                sb.Append($" {Logic} ");
+                sb.Append( String.Join(" " + Logic + " ", Filters.Select(filter => filter.ToExpression(filters)).ToArray()) + ")");
+            }
+            return sb.ToString();
         }
     }
 }
